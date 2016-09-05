@@ -1,0 +1,10 @@
+log/
+dist/
+.DS_Store
+.idea/*
+vendor/*
+deploy
+
+# Node grunt
+node_modules/
+npm-debug.log
