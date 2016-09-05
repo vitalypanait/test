@@ -27,24 +27,13 @@ gulp.task('git', function(cb) {
 		'git fetch -q origin && ' +
 		'git fetch --tags -q origin && ' +
 		'git clean -q -d -f && ' +
-		'git branch; ' +
+		'git merge -q master && ' +
+		'git rev-parse HEAD; ' +
 		'else  ' +
 		'git clone -q ' + repositoryUrl + ' ' + path + '/shared/cached-copy && ' +
 		'cd ' + path + '/shared/cached-copy && ' +
-		'git checkout -q -b deploy; ' +
+		'git checkout -q master; ' +
 		'fi';
-	//'echo 1; ' +
-	//'cd ' + path + '/shared/cached-copy && ' +
-	//'git remote set-url origin git@github.com:vitalypanait/test.git && ' +
-	//'git fetch -q origin && ' +
-	//'git fetch --tags -q origin && ' +
-	//'git clean -q -d -f; ' +
-	//'else ' +
-	//'git clone -q git@github.com:vitalypanait/test.git ' + path + '/shared/cached-copy && ' +
-	//'cd ' + path + '/shared/cached-copy && ' +
-	//'ls -la; ' +
-	//'echo 2; ' +
-	//'fi';
 
 	exec(cmd, function (err, stdout) {
 
