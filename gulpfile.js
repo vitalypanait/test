@@ -21,7 +21,7 @@ gulp.task('check', function(cb) {
 });
 
 gulp.task('git', function(cb) {
-	var cmd = 'if [ -d /var/www/test/deploy/shared/cached-copy ] ; then ' +
+	var cmd = 'if [ -d ' + path + '/shared/cached-copy ] ; then ' +
 		'cd ' + path + '/shared/cached-copy && ' +
 		'git remote set-url origin ' + repositoryUrl + ' && ' +
 		'git fetch -q origin && ' +
