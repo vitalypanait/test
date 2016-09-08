@@ -10,14 +10,12 @@ var releasesPath = path + 'releases/';
 var repository   = 'git@github.com:vitalypanait/test.git'
 var branch       = 'master';
 
-
 var releaseName;
 var commit;
 
 function addZero(value) {
 	return (parseInt(value, 10) < 10 ) ? '0' + value : value;
 }
-
 
 gulp.task('deploy:prepare:init', function(cb) {
 	exec('mkdir -p ' + path + ' && mkdir -p ' + releasesPath + ' && mkdir -p ' + sharedPath, function (err) {
@@ -84,7 +82,8 @@ gulp.task('deploy:info', function(cb) {
 	var goToRelease = 'cd ' + releasesPath + releaseName;
 	var cmd         = goToRelease + ' && echo \'' + branch + '\' > ./BRANCH && ' +
 		goToRelease + ' && echo ' + commit + ' > ./REVISION && ' +
-		goToRelease + ' && echo ' + releaseName + ' > ./RELEASE';
+		goToRelease + ' && echo ' + releaseName + ' > ./RELEASE && ' +
+		goToRelease + ' && touch TRANSACTION';
 
 	exec(cmd, function(err) {
 		cb(err);
@@ -92,7 +91,15 @@ gulp.task('deploy:info', function(cb) {
 });
 
 gulp.task('deploy:symlink', function(cb) {
-	exec('ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current', function(err) {
+	console.log('ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current');
+
+	exec('[ -e ' + releasesPath + releaseName + ' ] && ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current', function(err) {
+		cb(err);
+	})
+});
+
+gulp.task('deploy:transaction', function(cb) {
+	exec('cd ' + releasesPath + releaseName + ' && echo "SUCCESS" > ./TRANSACTION', function(err) {
 		cb(err);
 	})
 });
@@ -103,25 +110,33 @@ gulp.task('rollback:find', function(cb) {
 	exec('cat ' + path + 'current/RELEASE ', function(err, stdout) {
 		currentRelease = stdout.split('\n')[0];
 
+		console.log(currentRelease);
+
 		cb(err);
 	});
 });
 
-gulp.task('rollback:get', function(cb) {
-	exec('cd /var/www/test/deploy/releases/ && ls -trd */', function(err, stdout) {
+gulp.task('rollback:set', function(cb) {
+	exec('find ' + path + ' -not -empty -type f -name TRANSACTION', function(err, stdout) {
 		var directories = stdout.split('\n');
 
 		if (directories.length === 0) {
-			cb('Empty elder release');
+			cb('Can not find release to rollback');
 		}
 
+		directories.reverse().forEach(function(item, key, arr) {
+			item = (item.split('/TRANSACTION')[0]).split('releases/')[1];
+
+			arr[key] = item === undefined ? '' : item;
+		});
+
+		releaseName = currentRelease;
+
 		var isFindCurrent = false;
-		var rollbackRelease = current;
 
 		directories.some(function(item) {
-			console.log(item);
 			if (isFindCurrent) {
-				rollbackRelease = item;
+				releaseName = item;
 
 				return true;
 			}
@@ -131,7 +146,11 @@ gulp.task('rollback:get', function(cb) {
 			}
 		});
 
-		console.log('Rollback release = ' + rollbackRelease);
+		if (releaseName.length === 0) {
+			cb('Can not find release to rollback');
+		}
+
+		console.log(releaseName);
 
 		cb(err);
 	});
@@ -144,5 +163,12 @@ gulp.task('deploy', gulp.series(
 	'deploy:prepare:release',
 	'deploy:sync',
 	'deploy:info',
+	'deploy:symlink',
+	'deploy:transaction'
+));
+
+gulp.task('rollback', gulp.series(
+	'rollback:find',
+	'rollback:set',
 	'deploy:symlink'
 ));
