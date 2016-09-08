@@ -32,8 +32,10 @@ gulp.task('git', function(cb) {
 	var cmd = 'if [ -d ' + shared + 'cached-copy ] ; then ' +
 		'cd ' + shared + 'cached-copy && ' +
 		'git remote set-url origin ' + repositoryUrl + ' && ' +
+		'git fetch -q origin && ' +
+		'git fetch --tags -q origin && ' +
 		//'git pull -q origin master && ' +
-		'git reset -q --hard ' + lastCommit + ' &&' +
+		'git reset -q --hard ' + lastCommit + ' && ' +
 		'git clean -q -d -f; ' +
 		'else  ' +
 		'git clone -q ' + repositoryUrl + ' ' + shared + 'cached-copy && ' +
