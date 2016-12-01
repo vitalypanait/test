@@ -2,29 +2,31 @@
 
 const gulp = require('gulp');
 
-var exec = require('child_process').exec;
+let exec = require('child_process').exec;
 
-var path         = '/var/www/test/deploy/';
-var sharedPath   = path + 'shared/';
-var releasesPath = path + 'releases/';
-var repository   = 'git@github.com:vitalypanait/test.git'
-var branch       = 'master';
+let path         = '/var/www/test/deploy/';
+let sharedPath   = path + 'shared/';
+let releasesPath = path + 'releases/';
+let repository   = 'git@github.com:vitalypanait/test.git';
+let branch       = 'master';
 
-var releaseName;
-var commit;
+let releaseName;
+let commit;
 
 function addZero(value) {
 	return (parseInt(value, 10) < 10 ) ? '0' + value : value;
 }
 
-gulp.task('deploy:prepare:init', function(cb) {
-	exec('mkdir -p ' + path + ' && mkdir -p ' + releasesPath + ' && mkdir -p ' + sharedPath, function (err) {
-		cb(err);
+gulp.task('deploy:prepare:init', (cb) => {
+	exec(`mkdir -p ${path} && mkdir -p ${releasesPath} && mkdir -p ${sharedPath}`, (err) => {
+		if (err !== null) {
+			cb(err);
+		}
 	});
 });
 
-gulp.task('deploy:prepare:commit', function(cb) {
-	exec('git ls-remote ' + repository +  ' ' + branch, function(err, stdout) {
+gulp.task('deploy:prepare:commit', (cb) => {
+	exec(`git ls-remote ${repository} ${branch}`, (err, stdout) => {
 		commit = stdout.split('\t')[0];
 
 		if (commit.length === 0) {
@@ -35,28 +37,28 @@ gulp.task('deploy:prepare:commit', function(cb) {
 	});
 });
 
-gulp.task('deploy:prepare:get', function(cb) {
-	var cmd = 'if [ -d ' + sharedPath + 'cached-copy ] ; then ' +
-		'cd ' + sharedPath + 'cached-copy && ' +
-		'git remote set-url origin ' + repository + ' && ' +
-		'git fetch -q origin && ' +
-		'git fetch --tags -q origin && ' +
-		'git reset -q --hard ' + commit + ' && ' +
-		'git clean -q -d -f; ' +
-		'else ' +
-		'git clone -q ' + repository + ' ' + sharedPath + 'cached-copy && ' +
-		'cd ' + sharedPath + 'cached-copy && ' +
-		'git checkout -q -b deploy ' + commit + '; ' +
-		'fi';
+gulp.task('deploy:prepare:get', (cb) => {
+	let cmd = `if [ -d ${sharedPath}cached-copy ] ; then ` +
+		`cd ${sharedPath}cached-copy && ` +
+		`git remote set-url origin ${repository} && ` +
+		`git fetch -q origin && ` +
+		`git fetch --tags -q origin && ` +
+		`git reset -q --hard ${commit} && ` +
+		`git clean -q -d -f; ` +
+		`else ` +
+		`git clone -q ${repository} ${sharedPath}cached-copy && ` +
+		`cd ${sharedPath}cached-copy && ` +
+		`git checkout -q -b deploy ${commit}; ` +
+		`fi`;
 
-	exec(cmd, function (err) {
+	exec(cmd, (err) => {
 		cb(err);
 	});
 });
 
-gulp.task('deploy:prepare:release', function(cb) {
-	var now         = new Date();
-	var data = [
+gulp.task('deploy:prepare:release', (cb) => {
+	let now  = new Date();
+	let data = [
 		now.getFullYear(),
 		addZero(now.getMonth() + 1),
 		addZero(now.getDate()),
@@ -67,47 +69,47 @@ gulp.task('deploy:prepare:release', function(cb) {
 
 	releaseName = data.join('');
 
-	exec('cd ' + releasesPath + ' && mkdir ' + releaseName, function(err) {
+	exec(`cd ${releasesPath} && mkdir ${releaseName}`, (err) => {
 		cb(err);
 	})
 });
 
-gulp.task('deploy:sync', function(cb) {
-	exec('rsync -a ' + sharedPath + 'cached-copy/ ' + releasesPath + releaseName + '/ --exclude=".git"', function(err) {
+gulp.task('deploy:sync', (cb) => {
+	exec(`rsync -a ${sharedPath}cached-copy/ ${releasesPath}${releaseName}/ --exclude=".git"`, (err) => {
 		cb(err);
 	})
 });
 
-gulp.task('deploy:info', function(cb) {
-	var goToRelease = 'cd ' + releasesPath + releaseName;
-	var cmd         = goToRelease + ' && echo \'' + branch + '\' > ./BRANCH && ' +
-		goToRelease + ' && echo ' + commit + ' > ./REVISION && ' +
-		goToRelease + ' && echo ' + releaseName + ' > ./RELEASE && ' +
-		goToRelease + ' && touch TRANSACTION';
+gulp.task('deploy:info', (cb) => {
+	let goToRelease = `cd ${releasesPath}${releaseName}`;
+	let cmd         = `${goToRelease} && echo '${branch}' > ./BRANCH && ` +
+		`${goToRelease} && echo ${commit} > ./REVISION && ` +
+		`${goToRelease} && echo ${releaseName} > ./RELEASE && ` +
+		`${goToRelease} && touch TRANSACTION`;
 
-	exec(cmd, function(err) {
+	exec(cmd, (err) => {
 		cb(err);
 	})
 });
 
-gulp.task('deploy:symlink', function(cb) {
+gulp.task('deploy:symlink', (cb) => {
 	console.log('ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current');
 
-	exec('[ -e ' + releasesPath + releaseName + ' ] && ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current', function(err) {
+	exec(`[ -e ${releasesPath}${releaseName} ] && ln -nfsv ${releasesPath}${releaseName} ${path}current`, (err) => {
 		cb(err);
 	})
 });
 
-gulp.task('deploy:transaction', function(cb) {
-	exec('cd ' + releasesPath + releaseName + ' && echo "SUCCESS" > ./TRANSACTION', function(err) {
+gulp.task('deploy:transaction', (cb) => {
+	exec(`cd ${releasesPath}${releaseName} && echo "SUCCESS" > ./TRANSACTION`, (err) => {
 		cb(err);
 	})
 });
 
 var currentRelease;
 
-gulp.task('rollback:find', function(cb) {
-	exec('cat ' + path + 'current/RELEASE ', function(err, stdout) {
+gulp.task('rollback:find', (cb) => {
+	exec(`cat ${path}current/RELEASE`, (err, stdout) => {
 		currentRelease = stdout.split('\n')[0];
 
 		console.log(currentRelease);
@@ -116,15 +118,15 @@ gulp.task('rollback:find', function(cb) {
 	});
 });
 
-gulp.task('rollback:set', function(cb) {
-	exec('find ' + path + ' -not -empty -type f -name TRANSACTION', function(err, stdout) {
-		var directories = stdout.split('\n');
+gulp.task('rollback:set', (cb) => {
+	exec(`find ${path} -not -empty -type f -name TRANSACTION`, (err, stdout) => {
+		let directories = stdout.split('\n');
 
 		if (directories.length === 0) {
 			cb('Can not find release to rollback');
 		}
 
-		directories.reverse().forEach(function(item, key, arr) {
+		directories.reverse().forEach((item, key, arr) => {
 			item = (item.split('/TRANSACTION')[0]).split('releases/')[1];
 
 			arr[key] = item === undefined ? '' : item;
@@ -132,9 +134,9 @@ gulp.task('rollback:set', function(cb) {
 
 		releaseName = currentRelease;
 
-		var isFindCurrent = false;
+		let isFindCurrent = false;
 
-		directories.some(function(item) {
+		directories.some((item) => {
 			if (isFindCurrent) {
 				releaseName = item;
 
