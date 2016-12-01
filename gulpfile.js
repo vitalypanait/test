@@ -19,9 +19,7 @@ function addZero(value) {
 
 gulp.task('deploy:prepare:init', (cb) => {
 	exec(`mkdir -p ${path} && mkdir -p ${releasesPath} && mkdir -p ${sharedPath}`, (err) => {
-		if (err !== null) {
-			cb(err);
-		}
+		cb(err);
 	});
 });
 
