@@ -12,18 +12,19 @@ let branch       = 'master';
 
 let releaseName;
 let commit;
+let currentRelease;
 
 function addZero(value) {
 	return (parseInt(value, 10) < 10 ) ? '0' + value : value;
 }
 
-gulp.task('deploy:prepare:init', (cb) => {
+gulp.task('deploy:prepare:init', cb => {
 	exec(`mkdir -p ${path} && mkdir -p ${releasesPath} && mkdir -p ${sharedPath}`, (err) => {
 		cb(err);
 	});
 });
 
-gulp.task('deploy:prepare:commit', (cb) => {
+gulp.task('deploy:prepare:commit', cb => {
 	exec(`git ls-remote ${repository} ${branch}`, (err, stdout) => {
 		commit = stdout.split('\t')[0];
 
@@ -35,7 +36,7 @@ gulp.task('deploy:prepare:commit', (cb) => {
 	});
 });
 
-gulp.task('deploy:prepare:get', (cb) => {
+gulp.task('deploy:prepare:get', cb => {
 	let cmd = `if [ -d ${sharedPath}cached-copy ] ; then ` +
 		`cd ${sharedPath}cached-copy && ` +
 		`git remote set-url origin ${repository} && ` +
@@ -49,12 +50,12 @@ gulp.task('deploy:prepare:get', (cb) => {
 		`git checkout -q -b deploy ${commit}; ` +
 		`fi`;
 
-	exec(cmd, (err) => {
+	exec(cmd, err => {
 		cb(err);
 	});
 });
 
-gulp.task('deploy:prepare:release', (cb) => {
+gulp.task('deploy:prepare:release', cb => {
 	let now  = new Date();
 	let data = [
 		now.getFullYear(),
@@ -67,46 +68,44 @@ gulp.task('deploy:prepare:release', (cb) => {
 
 	releaseName = data.join('');
 
-	exec(`cd ${releasesPath} && mkdir ${releaseName}`, (err) => {
+	exec(`cd ${releasesPath} && mkdir ${releaseName}`, err => {
 		cb(err);
-	})
+	});
 });
 
-gulp.task('deploy:sync', (cb) => {
-	exec(`rsync -a ${sharedPath}cached-copy/ ${releasesPath}${releaseName}/ --exclude=".git"`, (err) => {
+gulp.task('deploy:sync', cb => {
+	exec(`rsync -a ${sharedPath}cached-copy/ ${releasesPath}${releaseName}/ --exclude=".git"`, err => {
 		cb(err);
-	})
+	});
 });
 
-gulp.task('deploy:info', (cb) => {
+gulp.task('deploy:info', cb => {
 	let goToRelease = `cd ${releasesPath}${releaseName}`;
 	let cmd         = `${goToRelease} && echo '${branch}' > ./BRANCH && ` +
 		`${goToRelease} && echo ${commit} > ./REVISION && ` +
 		`${goToRelease} && echo ${releaseName} > ./RELEASE && ` +
 		`${goToRelease} && touch TRANSACTION`;
 
-	exec(cmd, (err) => {
+	exec(cmd, err => {
 		cb(err);
-	})
+	});
 });
 
-gulp.task('deploy:symlink', (cb) => {
-	console.log('ln -nfsv ' + releasesPath + releaseName + ' ' + path + 'current');
+gulp.task('deploy:symlink', cb => {
+	console.log(`ln -nfsv ${releasesPath}${releaseName} ${path}current`);
 
-	exec(`[ -e ${releasesPath}${releaseName} ] && ln -nfsv ${releasesPath}${releaseName} ${path}current`, (err) => {
+	exec(`[ -e ${releasesPath}${releaseName} ] && ln -nfsv ${releasesPath}${releaseName} ${path}current`, err => {
 		cb(err);
-	})
+	});
 });
 
 gulp.task('deploy:transaction', (cb) => {
 	exec(`cd ${releasesPath}${releaseName} && echo "SUCCESS" > ./TRANSACTION`, (err) => {
 		cb(err);
-	})
+	});
 });
 
-var currentRelease;
-
-gulp.task('rollback:find', (cb) => {
+gulp.task('rollback:find', cb => {
 	exec(`cat ${path}current/RELEASE`, (err, stdout) => {
 		currentRelease = stdout.split('\n')[0];
 
@@ -134,7 +133,7 @@ gulp.task('rollback:set', (cb) => {
 
 		let isFindCurrent = false;
 
-		directories.some((item) => {
+		directories.some(item => {
 			if (isFindCurrent) {
 				releaseName = item;
 
